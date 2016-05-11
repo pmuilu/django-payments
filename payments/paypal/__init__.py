@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from .forms import PaymentForm
 from .. import BasicProvider, RedirectNeeded, get_credit_card_issuer
-
+from decimal import *
 
 class UnauthorizedRequest(Exception):
     pass
@@ -89,18 +89,20 @@ class PaypalProvider(BasicProvider):
             yield item
 
     def get_transactions_data(self):
+        TWOPLACES = Decimal(10) ** -2
         items = list(self.get_transactions_items())
         sub_total = self.payment.total - self.payment.delivery - self.payment.tax
         data = {
             'intent': 'sale',
             'transactions': [{
                 'amount': {
-                    'total': str(self.payment.total),
+                    'total': str(Decimal(self.payment.total).quantize(TWOPLACES)),
                     'currency': self.payment.currency,
                     'details': {
-                        'subtotal': str(sub_total),
-                        'tax': str(self.payment.tax),
-                        'shipping': str(self.payment.delivery)}},
+                        'subtotal': str(Decimal(sub_total).quantize(TWOPLACES)),
+                        'tax': str(Decimal(self.payment.tax).quantize(TWOPLACES)),
+                        'shipping': str(Decimal(self.payment.delivery).quantize(TWOPLACES))
+                        }},
                 'item_list': {'items': items},
                 'description': self.payment.description}]}
         return data
